@@ -139,6 +139,9 @@ win-x64)
 		while read -r dep; do
 			[ -n "$dep" ] || continue
 			[ -e "/mingw64/bin/$dep" ] || continue
+			# 多个库会依赖同一个 dep（avcodec / avformat 都吃 zlib1.dll），去重：
+			# libs_csv 是 index.json 里的运行期库清单，重复登记会让消费方重复解包。
+			case ",${libs_csv}," in *",$dep,"*) continue ;; esac
 			cp -L "/mingw64/bin/$dep" "$STAGE/$dep" || die "拷贝运行期依赖失败：$dep"
 			libs_csv="$libs_csv,$dep"
 			echo "  bundled dep: $dep"
