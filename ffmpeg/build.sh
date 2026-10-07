@@ -91,6 +91,12 @@ CONFIGURE=(
 )
 case "$RID" in
 win-x64 | linux-x64) CONFIGURE+=(--enable-x86asm) ;;
+osx-arm64)
+	# macOS 的 dylib 默认把 install_name 写成本次构建前缀下的绝对路径（临时目录，运行期
+	# 早就不存在），届时 dlopen libavformat 会因找不到 libavutil 而失败。改成 @loader_path：
+	# 依赖按「引用者所在目录」解析，插件把 5 个库平铺在同一目录即可自洽。
+	CONFIGURE+=(--install-name-dir='@loader_path')
+	;;
 esac
 
 # zlib 是唯一允许的外部依赖（PNG 内嵌封面必需）：本机有就带，没有就降级，不让构建失败。
