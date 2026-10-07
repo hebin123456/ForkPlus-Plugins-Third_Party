@@ -161,8 +161,21 @@ linux-*)
 	;;
 osx-arm64)
 	for n in "${names[@]}"; do
-		src="$(ls "$PREFIX/lib/lib$n".[0-9]*.dylib 2>/dev/null | head -n1)"
+		src=""
+		for f in "$PREFIX"/lib/lib"$n".[0-9]*.dylib; do
+			[ -e "$f" ] || continue
+			# 只认 lib<name>.<major>.dylib：FFmpeg.AutoGen 的 MacFunctionResolver 按
+			# lib<name>.<major>.dylib 取件（Windows 是 <name>-<major>.dll、Linux 是
+			# lib<name>.so.<major>），而 FFmpeg 在 macOS 上装的实体文件叫
+			# lib<name>.<major>.<minor>.<patch>.dylib、<major> 名只是指向它的软链——
+			# 若贪图 ls 的第一个结果就会打成前者，运行期 dlopen 必失败。
+			case "$(basename "$f")" in *.[0-9]*.[0-9]*) continue ;; esac
+			src="$f"
+			break
+		done
 		[ -n "$src" ] || die "缺 lib$n.<major>.dylib（$PREFIX/lib）"
+		# cp -L 把软链落成实体文件（zip 不带软链，且 dylib 的 install_name 就是
+		# @loader_path/lib<name>.<major>.dylib，同目录同名才解析得到）。
 		stage_lib "$src" "$(basename "$src")"
 	done
 	;;
