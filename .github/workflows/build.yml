@@ -1,0 +1,150 @@
+# ForkPlus-Plugins-Third_Party · 三方件四平台构建与发布
+#
+# 触发：
+#   - push 版本 tag（`0.0.1` / `v0.0.1`）：四平台构建 → 汇总 → 创建 GitHub Release
+#   - workflow_dispatch：只构建 + 上传 Artifacts（不发 Release）
+#
+# 四平台与 ForkPlus 宿主一致：
+#   win-x64     → windows-latest    （MSYS2 MINGW64 工具链）
+#   linux-x64   → ubuntu-latest
+#   linux-arm64 → ubuntu-22.04-arm  （原生 ARM64 runner，公开仓库免费）
+#   osx-arm64   → macos-latest
+#
+# 「组件 × RID」由 scripts/matrix.py 扫描 <component>/manifest.json 自动展开：
+# 新增一个三方件只需建目录 + 写 manifest.json + build.sh，**不用改本文件**。
+#
+# 交付件：<component>-<rid>.zip（稳定名，平铺运行期库 + 许可全文 + component.json）。
+# Release 另附 index.json，登记每个交付件的 sha256 / 大小 / 运行期库名——插件仓据此
+# 校验下载，因此可以「不锁版本、自动消费最新 tag」。index.json 的格式属对外接口。
+
+name: build
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+      - '[0-9]*'
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # 展开构建矩阵 + 解析版本号。轻量、先行，供后续 job 复用。
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enumerate components
+        id: matrix
+        run: python3 scripts/matrix.py >> "$GITHUB_OUTPUT"
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "version: $version (from tag ${tag})"
+
+  build:
+    name: ${{ matrix.component }} · ${{ matrix.rid }}
+    needs: plan
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Windows 上 FFmpeg 的 configure / make 是 bash 脚本，走 MSYS2 的 MINGW64 环境。
+      # x86_64 的汇编需要 nasm；python 供 build.sh / pack.py 解析 manifest 与打包。
+      - name: Setup MSYS2 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            git
+            make
+            nasm
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-python
+
+      # Linux 的 gcc / make 由 runner 自带；x86_64 的汇编需要 nasm。
+      - name: Install nasm (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nasm
+
+      - name: Build (Windows · MSYS2 MINGW64)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist
+
+      - name: Build (Linux / macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.component }}-${{ matrix.rid }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  # 仅 tag 触发：四平台全绿后汇总交付件并创建 Release。
+  # 只需部分平台成功即可发版（fail-fast: false），但 Release 汇总用的是实际产出的那几个。
+  release:
+    name: Release
+    needs: [plan, build]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # 拉平后一并发布：交付件放 Release 根目录，插件仓才能按
+      # releases/latest/download/<asset> 直接取；index.json 同理。
+      - name: Assemble index.json
+        run: |
+          set -e
+          mkdir -p release-assets
+          find artifacts -name '*.zip' -exec cp {} release-assets/ \;
+          python3 scripts/index.py artifacts release-assets/index.json \
+            --body release-notes.md \
+            --tag "${{ needs.plan.outputs.version }}"
+          echo "--- release assets ---"
+          ls -la release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          body_path: release-notes.md

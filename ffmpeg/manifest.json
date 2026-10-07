@@ -1,0 +1,50 @@
+{
+  "component": "ffmpeg",
+  "version": "9.0.2",
+  "sourceUrl": "https://github.com/FFmpeg/FFmpeg",
+  "sourceRef": "n9.0.2",
+  "license": "LGPL-2.1-or-later",
+  "upstream": "https://ffmpeg.org/",
+  "purpose": "音视频解码 / 容器解析 / 缩放 / 重采样；ForkPlus.Plugins.Audio 与 ForkPlus.Plugins.Video 的共享解码核心。",
+  "buildConstraint": [
+    "只解码，不编码：--disable-encoders --disable-muxers --disable-hwaccels。",
+    "绝不带 --enable-gpl / --enable-nonfree / --enable-version3，产物保持 LGPL-2.1-or-later。",
+    "--disable-autodetect：不链接任何外部编解码库，四平台能力一致、无额外运行期依赖（zlib 例外，见下）。",
+    "四个 RID 用同一套 configure，只按平台自动切换工具链。"
+  ],
+  "buildScript": "build.sh",
+  "runtimeLibraries": [
+    "avformat",
+    "avcodec",
+    "avutil",
+    "swscale",
+    "swresample"
+  ],
+  "excludedLibraries": [
+    "avdevice",
+    "avfilter"
+  ],
+  "bindings": {
+    "package": "FFmpeg.AutoGen",
+    "version": "9.0.1.1",
+    "note": "原生库大版本必须与绑定一致（avutil 61 / avcodec 63 / avformat 63 / swscale 10 / swresample 7）。绑定经 NuGet 在插件仓消费，不在本仓。"
+  },
+  "zlib": {
+    "enabled": "autodetect",
+    "note": "唯一允许的外部依赖（PNG 内嵌封面必需）。configure 前探测本机构建用 zlib，缺则自动降级不带 --enable-zlib，不会构建失败；Windows 上若被链接则由构建脚本把 zlib1.dll 一并打进交付件。"
+  },
+  "rids": [
+    "win-x64",
+    "linux-x64",
+    "linux-arm64",
+    "osx-arm64"
+  ],
+  "assets": {
+    "naming": "ffmpeg-<rid>.zip（稳定名，插件仓按 releases/latest/download/<asset> 消费）",
+    "layout": "平铺：运行期库（Linux 按 SONAME 命名 lib<name>.so.<major>、Windows 按 <name>-<major>.dll、macOS 按 lib<name>.<major>.dylib）+ LICENSE.md + COPYING.LGPLv2.1 + component.json"
+  },
+  "consumers": [
+    "ForkPlus.Plugins.Audio",
+    "ForkPlus.Plugins.Video"
+  ]
+}
