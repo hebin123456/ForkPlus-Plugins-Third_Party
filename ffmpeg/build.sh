@@ -71,7 +71,9 @@ PREFIX="$WORK/prefix"
 STAGE="$WORK/stage"
 mkdir -p "$STAGE"
 
-log "ffmpeg $VERSION · $RID（自建，源 $URL@$REF，$JOBS 并发）"
+# 变量一律加花括号：macOS 的 bash 3.2 在非 UTF-8 locale 下会把紧跟 $VAR 的多字节字符
+# 的首字节并进变量名，`$RID（` 会被当成变量 RID<乱码>，直接 unbound variable 退出。
+log "ffmpeg ${VERSION} · ${RID}（自建，源 $URL@${REF}，${JOBS} 并发）"
 git clone --depth 1 --branch "$REF" "$URL" "$SRC" >/dev/null 2>&1 || die "浅克隆失败：$URL@$REF"
 COMMIT="$(git -C "$SRC" rev-parse HEAD)"
 echo "  commit: $COMMIT"

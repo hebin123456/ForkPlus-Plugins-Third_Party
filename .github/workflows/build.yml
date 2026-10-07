@@ -86,9 +86,17 @@ jobs:
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-python
 
-      # Linux 的 gcc / make 由 runner 自带；x86_64 的汇编需要 nasm。
-      - name: Install nasm (Linux)
-        if: runner.os == 'Linux'
+      # build.sh / pack.py 用 python3 解析 manifest 与打包（Windows 的 MSYS2 里另装了
+      # mingw python；这里显式保证 Linux / macOS 上一定有 python3）。
+      - name: Setup Python
+        if: runner.os != 'Windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # Linux 的 gcc / make 由 runner 自带；x86_64 的汇编需要 nasm（arm64 不用装）。
+      - name: Install nasm (Linux x64)
+        if: matrix.rid == 'linux-x64'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends nasm
