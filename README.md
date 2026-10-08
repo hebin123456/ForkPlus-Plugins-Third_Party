@@ -1,5 +1,9 @@
 # ForkPlus-Plugins-Third_Party
 
+[![build passing](https://github.com/hebin123456/ForkPlus-Plugins-Third_Party/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/hebin123456/ForkPlus-Plugins-Third_Party/actions/workflows/build.yml)
+[![release](https://img.shields.io/github/v/release/hebin123456/ForkPlus-Plugins-Third_Party?label=release&color=blue)](https://github.com/hebin123456/ForkPlus-Plugins-Third_Party/releases)
+[![license: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 ForkPlus 插件的**三方件源码仓**：把插件依赖的原生库（源码）统一收到这里，自建编译，
 出四平台交付件，由插件仓（[ForkPlus-Plugins](https://github.com/hebin123456/ForkPlus-Plugins)）
 直接消费产物。
