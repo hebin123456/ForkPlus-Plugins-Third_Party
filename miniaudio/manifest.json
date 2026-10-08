@@ -1,0 +1,42 @@
+{
+  "component": "miniaudio",
+  "version": "0.11.25",
+  "sourceUrl": "https://github.com/mackron/miniaudio",
+  "sourceRef": "0.11.25",
+  "license": "Unlicense OR MIT-0",
+  "upstream": "https://miniaud.io/",
+  "purpose": "跨平台音频输出后端（ALSA / PulseAudio / CoreAudio / WASAPI），替代 WASAPI / CoreAudio / ALSA 三套原生代码。只作输出，解码由 FFmpeg 负责；经自写的 C ABI 垫片 fpp_audio.c/.h 暴露给 .NET（ForkPlus.Plugins.Media 的 MiniAudioNative 显式加载）。",
+  "buildConstraint": [
+    "只取上游单头 miniaudio.h，用同目录的 fpp_audio.c 以 MINIAUDIO_IMPLEMENTATION 编进同一 TU，不引入上游构建系统。",
+    "只导出 fpp_audio_* 的 C ABI（不透明句柄）；miniaudio 各版本不保证 ABI 兼容，故不把它的类型/符号暴露给 .NET。",
+    "ALSA / PulseAudio / CoreAudio / WASAPI 一律运行期 dlopen：产物不产生 libasound / libpulse / 各 framework 的 DT_NEEDED，构建也不需要任何 -dev 包。",
+    "共享库（非静态）：插件仓按 RID 随包平铺分发，运行期从插件目录按固定文件名加载。"
+  ],
+  "buildScript": "build.sh",
+  "runtimeLibraries": [
+    "fpp_audio"
+  ],
+  "bindings": {
+    "note": "无托管 NuGet 绑定：C# 侧 ForkPlus.Plugins.Media/MiniAudioNative.cs 用 NativeLibrary 显式加载并按符号名解析，故运行期库名必须与 LibraryFileName() 逐字对应。"
+  },
+  "rids": [
+    "win-x64",
+    "linux-x64",
+    "linux-arm64",
+    "osx-arm64"
+  ],
+  "assets": {
+    "naming": "miniaudio-<rid>.zip（稳定名，插件仓按 releases/latest/download/<asset> 消费）",
+    "layout": "平铺：运行期库（Linux libfpp_audio.so.0、Windows fpp_audio.dll、macOS libfpp_audio.0.dylib）+ LICENSE.miniaudio + component.json"
+  },
+  "platforms": {
+    "win-x64": "MSYS2 MINGW64 自建，产出 fpp_audio.dll（WASAPI 运行期链接，无链接依赖）",
+    "linux-x64": "自建，产出 libfpp_audio.so.0（SONAME；ALSA / PulseAudio 运行期 dlopen）",
+    "linux-arm64": "自建，产出 libfpp_audio.so.0",
+    "osx-arm64": "自建，产出 libfpp_audio.0.dylib（install_name = @loader_path/libfpp_audio.0.dylib；CoreAudio 运行期 dlopen）"
+  },
+  "consumers": [
+    "ForkPlus.Plugins.Audio",
+    "ForkPlus.Plugins.Video"
+  ]
+}

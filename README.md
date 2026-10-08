@@ -24,6 +24,13 @@ scripts/pack.py               摊平目录 → <component>-<rid>.zip（+ 同名�
 | 组件 | 版本 | 许可 | 消费方 |
 | --- | --- | --- | --- |
 | `ffmpeg` | 9.0.2 | LGPL-2.1-or-later | `ForkPlus.Plugins.Audio` / `ForkPlus.Plugins.Video` |
+| `miniaudio` | 0.11.25 | Unlicense OR MIT-0 | `ForkPlus.Plugins.Audio` / `ForkPlus.Plugins.Video` |
+
+`miniaudio` 只负责**音频输出**（解码仍由 `ffmpeg` 负责），随目录另附一层自写的 C ABI
+垫片（`fpp_audio.c/.h`）：把 `miniaudio.h` 以 `MINIAUDIO_IMPLEMENTATION` 编进同一 TU，
+对外只导出 `fpp_audio_*` 的**不透明句柄**接口，避免 miniaudio 的 ABI 波动传到 .NET。
+交付件名不是通用的 `<name>-<major>.dll`，而是按插件仓 `MiniAudioNative.LibraryFileName()`
+逐字命名：Linux `libfpp_audio.so.0` / Windows `fpp_audio.dll` / macOS `libfpp_audio.0.dylib`。
 
 ## 出包
 
