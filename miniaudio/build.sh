@@ -93,9 +93,12 @@ linux-*)
 	;;
 osx-arm64 | osx-x64)
 	# install_name 用 @loader_path：依赖者按自身所在目录解析，插件平铺即自洽
-	# （与 ffmpeg 的 dylib 同一策略，见 ffmpeg/build.sh）。arm64 / x64 用同一命令，
-	# clang 按宿主默认目标编译。
-	"$cc_bin" -dynamiclib "${CFLAGS_COMMON[@]}" -o "$STAGE/libfpp_audio.0.dylib" \
+	# （与 ffmpeg 的 dylib 同一策略，见 ffmpeg/build.sh）。arm64 本机编译；x64 在 arm64
+	# runner 上交叉——Xcode clang 多架构驱动，-arch x86_64 直接产 Intel 目标码。
+	# ARCHFLAG 刻意不加引号：空串时展开为零参数，词分割正是想要的行为。
+	ARCHFLAG=""
+	[ "$RID" = osx-x64 ] && ARCHFLAG="-arch x86_64"
+	"$cc_bin" $ARCHFLAG -dynamiclib "${CFLAGS_COMMON[@]}" -o "$STAGE/libfpp_audio.0.dylib" \
 		-install_name @loader_path/libfpp_audio.0.dylib \
 		"$HERE/fpp_audio.c" -I"$HERE" -I"$SRC" \
 		-lpthread -lm \

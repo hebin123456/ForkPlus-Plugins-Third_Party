@@ -9,7 +9,8 @@
 #   linux-x64   → ubuntu-latest
 #   linux-arm64 → ubuntu-22.04-arm  （原生 ARM64 runner，公开仓库免费）
 #   osx-arm64   → macos-latest
-#   osx-x64     → macos-13          （Intel runner，macos-latest 已无 x64）
+#   osx-x64     → macos-latest      （arm64 runner 上 -arch x86_64 交叉编译，不依赖容量小
+#                                  且已进退役流程的 Intel runner macos-13）
 #
 # 「组件 × RID」由 scripts/matrix.py 扫描 <component>/manifest.json 自动展开：
 # 新增一个三方件只需建目录 + 写 manifest.json + build.sh，**不用改本文件**。
@@ -102,7 +103,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends nasm
 
-      # macOS 镜像不含 nasm：osx-x64 的 x86_64 汇编同样需要（osx-arm64 不用）。
+      # macOS 镜像不含 nasm：osx-x64 的 x86_64 汇编同样需要（osx-arm64 不用）。arm64 上装的
+      # nasm 本体也是 arm64 二进制，但其 -f macho64 输出与宿主架构无关，交叉照用。
       - name: Install nasm (macOS x64)
         if: matrix.rid == 'osx-x64'
         run: brew install nasm
