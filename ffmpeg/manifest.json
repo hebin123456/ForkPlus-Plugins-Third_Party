@@ -9,8 +9,8 @@
   "buildConstraint": [
     "只解码，不编码：--disable-encoders --disable-muxers --disable-hwaccels。",
     "绝不带 --enable-gpl / --enable-nonfree / --enable-version3，产物保持 LGPL-2.1-or-later。",
-    "--disable-autodetect：不链接任何外部编解码库，四平台能力一致、无额外运行期依赖（zlib 例外，见下）。",
-    "四个 RID 用同一套 configure，只按平台自动切换工具链。"
+    "--disable-autodetect：不链接任何外部编解码库，五平台能力一致、无额外运行期依赖（zlib 例外，见下）。",
+    "五个 RID 用同一套 configure，只按平台自动切换工具链。"
   ],
   "buildScript": "build.sh",
   "runtimeLibraries": [
@@ -37,7 +37,8 @@
     "win-x64",
     "linux-x64",
     "linux-arm64",
-    "osx-arm64"
+    "osx-arm64",
+    "osx-x64"
   ],
   "assets": {
     "naming": "ffmpeg-<rid>.zip（稳定名，插件仓按 releases/latest/download/<asset> 消费）",

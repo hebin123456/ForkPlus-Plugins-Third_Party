@@ -13,12 +13,13 @@ import json
 import os
 import sys
 
-# RID → runner。与 ForkPlus 宿主的四平台一致（见插件仓 .github/workflows/build.yml）。
+# RID → runner。与 ForkPlus 宿主的五平台一致（见插件仓 .github/workflows/build.yml）。
 RUNNERS = {
     "win-x64": "windows-latest",
     "linux-x64": "ubuntu-latest",
     "linux-arm64": "ubuntu-22.04-arm",
     "osx-arm64": "macos-latest",
+    "osx-x64": "macos-13",
 }
 
 

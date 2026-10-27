@@ -1,14 +1,15 @@
-# ForkPlus-Plugins-Third_Party · 三方件四平台构建与发布
+# ForkPlus-Plugins-Third_Party · 三方件五平台构建与发布
 #
 # 触发：
-#   - push 版本 tag（`0.0.1` / `v0.0.1`）：四平台构建 → 汇总 → 创建 GitHub Release
+#   - push 版本 tag（`0.0.1` / `v0.0.1`）：五平台构建 → 汇总 → 创建 GitHub Release
 #   - workflow_dispatch：只构建 + 上传 Artifacts（不发 Release）
 #
-# 四平台与 ForkPlus 宿主一致：
+# 五平台与 ForkPlus 宿主一致：
 #   win-x64     → windows-latest    （MSYS2 MINGW64 工具链）
 #   linux-x64   → ubuntu-latest
 #   linux-arm64 → ubuntu-22.04-arm  （原生 ARM64 runner，公开仓库免费）
 #   osx-arm64   → macos-latest
+#   osx-x64     → macos-13          （Intel runner，macos-latest 已无 x64）
 #
 # 「组件 × RID」由 scripts/matrix.py 扫描 <component>/manifest.json 自动展开：
 # 新增一个三方件只需建目录 + 写 manifest.json + build.sh，**不用改本文件**。
@@ -101,6 +102,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends nasm
 
+      # macOS 镜像不含 nasm：osx-x64 的 x86_64 汇编同样需要（osx-arm64 不用）。
+      - name: Install nasm (macOS x64)
+        if: matrix.rid == 'osx-x64'
+        run: brew install nasm
+
       - name: Build (Windows · MSYS2 MINGW64)
         if: runner.os == 'Windows'
         shell: msys2 {0}
@@ -119,7 +125,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  # 仅 tag 触发：四平台全绿后汇总交付件并创建 Release。
+  # 仅 tag 触发：五平台全绿后汇总交付件并创建 Release。
   # 只需部分平台成功即可发版（fail-fast: false），但 Release 汇总用的是实际产出的那几个。
   release:
     name: Release

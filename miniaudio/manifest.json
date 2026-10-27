@@ -23,7 +23,8 @@
     "win-x64",
     "linux-x64",
     "linux-arm64",
-    "osx-arm64"
+    "osx-arm64",
+    "osx-x64"
   ],
   "assets": {
     "naming": "miniaudio-<rid>.zip（稳定名，插件仓按 releases/latest/download/<asset> 消费）",
@@ -33,7 +34,8 @@
     "win-x64": "MSYS2 MINGW64 自建，产出 fpp_audio.dll（WASAPI 运行期链接，无链接依赖）",
     "linux-x64": "自建，产出 libfpp_audio.so.0（SONAME；ALSA / PulseAudio 运行期 dlopen）",
     "linux-arm64": "自建，产出 libfpp_audio.so.0",
-    "osx-arm64": "自建，产出 libfpp_audio.0.dylib（install_name = @loader_path/libfpp_audio.0.dylib；CoreAudio 运行期 dlopen）"
+    "osx-arm64": "自建，产出 libfpp_audio.0.dylib（install_name = @loader_path/libfpp_audio.0.dylib；CoreAudio 运行期 dlopen）",
+    "osx-x64": "自建，产出 libfpp_audio.0.dylib（install_name = @loader_path/libfpp_audio.0.dylib；CoreAudio 运行期 dlopen）"
   },
   "consumers": [
     "ForkPlus.Plugins.Audio",

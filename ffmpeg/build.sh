@@ -92,9 +92,9 @@ CONFIGURE=(
 	--disable-autodetect --disable-debug
 )
 case "$RID" in
-win-x64 | linux-x64) CONFIGURE+=(--enable-x86asm) ;;
-osx-arm64)
-	# macOS 的 dylib 默认把 install_name 写成本次构建前缀下的绝对路径（临时目录，运行期
+win-x64 | linux-x64 | osx-x64) CONFIGURE+=(--enable-x86asm) ;;
+osx-arm64 | osx-x64)
+	# macOS（arm64 / x64 同策略）的 dylib 默认把 install_name 写成本次构建前缀下的绝对路径（临时目录，运行期
 	# 早就不存在），届时 dlopen libavformat 会因找不到 libavutil 而失败。改成 @loader_path：
 	# 依赖按「引用者所在目录」解析，插件把 5 个库平铺在同一目录即可自洽。
 	CONFIGURE+=(--install-name-dir='@loader_path')
@@ -162,7 +162,7 @@ linux-*)
 		stage_lib "$src" "$(basename "$src")"
 	done
 	;;
-osx-arm64)
+osx-arm64 | osx-x64)
 	for n in "${names[@]}"; do
 		src=""
 		for f in "$PREFIX"/lib/lib"$n".[0-9]*.dylib; do

@@ -91,14 +91,15 @@ linux-*)
 		-ldl -lpthread -lm \
 		|| die "编译失败（${RID}）"
 	;;
-osx-arm64)
+osx-arm64 | osx-x64)
 	# install_name 用 @loader_path：依赖者按自身所在目录解析，插件平铺即自洽
-	# （与 ffmpeg 的 dylib 同一策略，见 ffmpeg/build.sh）。
+	# （与 ffmpeg 的 dylib 同一策略，见 ffmpeg/build.sh）。arm64 / x64 用同一命令，
+	# clang 按宿主默认目标编译。
 	"$cc_bin" -dynamiclib "${CFLAGS_COMMON[@]}" -o "$STAGE/libfpp_audio.0.dylib" \
 		-install_name @loader_path/libfpp_audio.0.dylib \
 		"$HERE/fpp_audio.c" -I"$HERE" -I"$SRC" \
 		-lpthread -lm \
-		|| die "编译失败（osx-arm64）"
+		|| die "编译失败（${RID}）"
 	;;
 *)
 	die "未支持的 RID：$RID"
@@ -112,7 +113,7 @@ cp "$SRC/LICENSE" "$STAGE/LICENSE.miniaudio" || die "缺上游 LICENSE"
 case "$RID" in
 win-x64) LIBFILE="fpp_audio.dll" ;;
 linux-*) LIBFILE="libfpp_audio.so.0" ;;
-osx-arm64) LIBFILE="libfpp_audio.0.dylib" ;;
+osx-arm64 | osx-x64) LIBFILE="libfpp_audio.0.dylib" ;;
 esac
 [ -f "$STAGE/$LIBFILE" ] || die "缺运行期库：$LIBFILE"
 echo "  运行期库：$LIBFILE"
