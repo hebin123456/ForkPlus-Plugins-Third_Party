@@ -1,11 +1,12 @@
-# ForkPlus-Plugins-Third_Party · 三方件五平台构建与发布
+# ForkPlus-Plugins-Third_Party · 三方件六平台构建与发布
 #
 # 触发：
-#   - push 版本 tag（`0.0.1` / `v0.0.1`）：五平台构建 → 汇总 → 创建 GitHub Release
+#   - push 版本 tag（`0.0.1` / `v0.0.1`）：六平台构建 → 汇总 → 创建 GitHub Release
 #   - workflow_dispatch：只构建 + 上传 Artifacts（不发 Release）
 #
-# 五平台与 ForkPlus 宿主一致：
+# 六平台与 ForkPlus 宿主一致：
 #   win-x64     → windows-latest    （MSYS2 MINGW64 工具链）
+#   win-arm64   → windows-11-arm    （镜像自带 MSYS2 的 CLANGARM64 工具链，原生 ARM64）
 #   linux-x64   → ubuntu-latest
 #   linux-arm64 → ubuntu-22.04-arm  （原生 ARM64 runner，公开仓库免费）
 #   osx-arm64   → macos-latest
@@ -73,10 +74,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Windows 上 FFmpeg 的 configure / make 是 bash 脚本，走 MSYS2 的 MINGW64 环境。
+      # Windows x64：FFmpeg 的 configure / make 是 bash 脚本，走 MSYS2 的 MINGW64 环境。
       # x86_64 的汇编需要 nasm；python 供 build.sh / pack.py 解析 manifest 与打包。
-      - name: Setup MSYS2 (Windows)
-        if: runner.os == 'Windows'
+      - name: Setup MSYS2 (Windows x64 · MINGW64)
+        if: matrix.rid == 'win-x64'
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
@@ -88,8 +89,28 @@ jobs:
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-python
 
+      # Windows ARM64：windows-11-arm 镜像自带 MSYS2（C:\msys64，未加入 PATH）。
+      # setup-msys2 只发布 x86_64 安装包（在 ARM64 上行为异常），故直接用镜像自带的
+      # MSYS2 装 CLANGARM64 工具链：原生 aarch64-w64-windows-gnu 的 clang，
+      # zlib 与 python 与 x64 腿保持同一份能力。aarch64 无 x86 汇编需求，不需要 nasm；
+      # make 必须用 **msys** 版（/usr/bin/make，MSYS 运行时会给原生命令转换 POSIX 路径；
+      # clangarm64 工具链里的 mingw32-make 不做转换，FFmpeg 的 configure/make 依赖前者）；
+      # git 用 PATH 上 Git for Windows 的（不装 msys 版，避免顺手升级 MSYS2 运行时）。
+      - name: Setup MSYS2 packages (Windows ARM64 · CLANGARM64)
+        if: matrix.rid == 'win-arm64'
+        shell: bash
+        run: |
+          set -e
+          MSYSTEM=CLANGARM64 /c/msys64/usr/bin/bash.exe -lc '
+            pacman -Sy --needed --noconfirm --noprogressbar \
+              make \
+              mingw-w64-clang-aarch64-toolchain \
+              mingw-w64-clang-aarch64-zlib \
+              mingw-w64-clang-aarch64-python
+          '
+
       # build.sh / pack.py 用 python3 解析 manifest 与打包（Windows 的 MSYS2 里另装了
-      # mingw python；这里显式保证 Linux / macOS 上一定有 python3）。
+      # mingw / clangarm64 python；这里显式保证 Linux / macOS 上一定有 python3）。
       - name: Setup Python
         if: runner.os != 'Windows'
         uses: actions/setup-python@v5
@@ -109,10 +130,19 @@ jobs:
         if: matrix.rid == 'osx-x64'
         run: brew install nasm
 
-      - name: Build (Windows · MSYS2 MINGW64)
-        if: runner.os == 'Windows'
+      - name: Build (Windows x64 · MSYS2 MINGW64)
+        if: matrix.rid == 'win-x64'
         shell: msys2 {0}
         run: bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist
+
+      # 镜像自带的 MSYS2（C:\msys64）未进 PATH，显式经它的 bash 进入 CLANGARM64 环境；
+      # CHERE_INVOKING=1 保留当前工作目录（否则 /etc/profile 会 cd 到 $HOME）。
+      - name: Build (Windows ARM64 · MSYS2 CLANGARM64)
+        if: matrix.rid == 'win-arm64'
+        shell: bash
+        run: |
+          MSYSTEM=CLANGARM64 CHERE_INVOKING=1 /c/msys64/usr/bin/bash.exe -lc \
+            "bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist"
 
       - name: Build (Linux / macOS)
         if: runner.os != 'Windows'
@@ -127,7 +157,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  # 仅 tag 触发：五平台全绿后汇总交付件并创建 Release。
+  # 仅 tag 触发：六平台全绿后汇总交付件并创建 Release。
   # 只需部分平台成功即可发版（fail-fast: false），但 Release 汇总用的是实际产出的那几个。
   release:
     name: Release

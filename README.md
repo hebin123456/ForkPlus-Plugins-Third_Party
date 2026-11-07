@@ -5,11 +5,11 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ForkPlus 插件的**三方件源码仓**：把插件依赖的原生库（源码）统一收到这里，自建编译，
-出五平台交付件，由插件仓（[ForkPlus-Plugins](https://github.com/hebin123456/ForkPlus-Plugins)）
+出六平台交付件，由插件仓（[ForkPlus-Plugins](https://github.com/hebin123456/ForkPlus-Plugins)）
 直接消费产物。
 
 为什么自建：上游现成的二进制供给不齐（如 FFmpeg 的 macOS LGPL 共享构建长期缺位），
-且 configure 开关不可控。自建后五个平台用**同一套 configure**、同一份源码，能力一致、
+且 configure 开关不可控。自建后六个平台用**同一套 configure**、同一份源码，能力一致、
 许可干净（只解码、无 GPL）。
 
 ## 目录
@@ -20,7 +20,7 @@ ForkPlus 插件的**三方件源码仓**：把插件依赖的原生库（源码�
 scripts/matrix.py             「组件 × RID」→ GitHub Actions matrix
 scripts/index.py              各平台打包记录 → Release 的 index.json + 说明
 scripts/pack.py               摊平目录 → <component>-<rid>.zip（+ 同名校验 JSON）
-.github/workflows/build.yml   tag → 五平台构建 → Release
+.github/workflows/build.yml   tag → 六平台构建 → Release
 ```
 
 组件是**平级目录**，一个三方件一个目录，互不干扰。当前：
@@ -44,7 +44,7 @@ scripts/pack.py               摊平目录 → <component>-<rid>.zip（+ 同名�
 git tag 0.0.1 && git push origin 0.0.1
 ```
 
-五平台（`win-x64` / `linux-x64` / `linux-arm64` / `osx-arm64` / `osx-x64`）各自构建，产物：
+六平台（`win-x64` / `win-arm64` / `linux-x64` / `linux-arm64` / `osx-arm64` / `osx-x64`）各自构建，产物：
 
 - `<component>-<rid>.zip` —— 稳定名，内容**平铺**：
   - 运行期库（Linux 按 SONAME `lib<name>.so.<major>`；Windows `<name>-<major>.dll`；macOS `lib<name>.<major>.dylib`）
@@ -59,7 +59,8 @@ git tag 0.0.1 && git push origin 0.0.1
 ## 新增一个三方件
 
 1. 建 `<component>/`，写 `manifest.json`（`component` / `version` / `sourceUrl` /
-   `sourceRef` / `license` / `runtimeLibraries` / `rids` 必填，`rids` 用上表四个 RID）。
+   `sourceRef` / `license` / `runtimeLibraries` / `rids` 必填，`rids` 取
+   `scripts/matrix.py` 里已登记 runner 的那几个）。
 2. 写 `build.sh <rid> <输出目录>`：浅克隆源码 → 编译 → 把交付文件摊平到 staging →
    调 `scripts/pack.py` 打包。可照抄 `ffmpeg/build.sh`。
 3. 若新平台 / 新工具链，改 `scripts/matrix.py` 的 `RUNNERS`；否则 CI **无需改动**。

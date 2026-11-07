@@ -8,7 +8,8 @@
 #
 # 用法：build.sh <rid> <输出目录>          例：build.sh linux-x64 dist
 #
-# 三平台通用（Linux / macOS / Windows 的 MSYS2 MINGW64 都是 bash）。
+# 三平台通用（Linux / macOS / Windows 的 MSYS2 都是 bash；Windows x64 走 MINGW64，
+# Windows ARM64 走 CLANGARM64）。
 # 依赖：git、python3（或 python）、目标平台 C 工具链。
 #
 # 命名与插件仓 MiniAudioNative.LibraryFileName() 逐字对应：
@@ -79,10 +80,12 @@ echo "  commit: $COMMIT"
 # Linux 只需 -ldl -lpthread -lm；Windows / macOS 无链接依赖（后端运行期 dlopen）。
 CFLAGS_COMMON=(-O2 -fPIC -fvisibility=default)
 case "$RID" in
-win-x64)
+win-x64 | win-arm64)
+	# x64 是 MINGW64 的 gcc，ARM64 是 CLANGARM64 的 clang（原生 aarch64-w64-windows-gnu
+	# target）；两者命令行一致，产物同名 fpp_audio.dll。
 	"$cc_bin" -shared "${CFLAGS_COMMON[@]}" -o "$STAGE/fpp_audio.dll" \
 		"$HERE/fpp_audio.c" -I"$HERE" -I"$SRC" \
-		|| die "编译失败（win-x64）"
+		|| die "编译失败（${RID}）"
 	;;
 linux-*)
 	"$cc_bin" -shared "${CFLAGS_COMMON[@]}" -o "$STAGE/libfpp_audio.so.0" \
@@ -114,7 +117,7 @@ cp "$SRC/LICENSE" "$STAGE/LICENSE.miniaudio" || die "缺上游 LICENSE"
 
 # 实际产出的运行期库文件名（一个 RID 一个），交给 pack.py 校验并写进 index.json。
 case "$RID" in
-win-x64) LIBFILE="fpp_audio.dll" ;;
+win-x64 | win-arm64) LIBFILE="fpp_audio.dll" ;;
 linux-*) LIBFILE="libfpp_audio.so.0" ;;
 osx-arm64 | osx-x64) LIBFILE="libfpp_audio.0.dylib" ;;
 esac

@@ -8,7 +8,8 @@
 #
 # 用法：build.sh <rid> <输出目录>          例：build.sh linux-x64 dist
 #
-# 三平台通用（Linux / macOS / Windows 的 MSYS2 MINGW64 都是 bash）。
+# 三平台通用（Linux / macOS / Windows 的 MSYS2 都是 bash；Windows x64 走 MINGW64，
+# Windows ARM64 走 CLANGARM64）。
 # 依赖：git、python3（或 python）、make、目标平台 C 工具链；x64 另需 nasm。
 #
 # 摊平后的命名与 FFmpeg.AutoGen 运行期解析规则逐字对应：
@@ -93,6 +94,14 @@ CONFIGURE=(
 )
 case "$RID" in
 win-x64 | linux-x64) CONFIGURE+=(--enable-x86asm) ;;
+win-arm64)
+	# MSYS2 CLANGARM64：cc 即 clang，原生 target 就是 aarch64-w64-windows-gnu。
+	# 但 msys-2.0.dll 是 x86_64（在 ARM64 上模拟运行），uname 给出 x86_64 /
+	# CLANGARM64_NT-*，configure 的自动探测既会选错 arch，也认不出 mingw 目标，
+	# 必须显式指定 arch 与 target-os（与 MSYS2 官方 ffmpeg PKGBUILD 同法）。
+	# aarch64 没有 x86 汇编，不加 --enable-x86asm。
+	CONFIGURE+=(--arch=aarch64 --target-os=mingw32)
+	;;
 osx-arm64)
 	# macOS 的 dylib 默认把 install_name 写成本次构建前缀下的绝对路径（临时目录，运行期
 	# 早就不存在），届时 dlopen libavformat 会因找不到 libavutil 而失败。改成 @loader_path：
@@ -141,22 +150,28 @@ stage_lib() {
 IFS=',' read -r -a names <<<"$LIBS"
 
 case "$RID" in
-win-x64)
+win-x64 | win-arm64)
+	# 运行期 DLL 的来源目录：x64 是 MINGW64 前缀；ARM64 是 CLANGARM64 工具链前缀
+	# （libwinpthread / zlib 等都在这里），从 cc 的实际路径推导，不硬编码安装位置。
+	runtime_bin="/mingw64/bin"
+	if [ "$RID" = win-arm64 ]; then
+		runtime_bin="$(dirname "$(command -v "$cc_bin")")"
+	fi
 	for n in "${names[@]}"; do
 		src="$(ls "$PREFIX/bin/$n"-[0-9]*.dll 2>/dev/null | head -n1)"
 		[ -n "$src" ] || die "缺 $n-<major>.dll（$PREFIX/bin）"
 		stage_lib "$src" "$(basename "$src")"
 	done
-	# 非系统 DLL（当前只有 zlib1.dll）必须随包分发：只认 MINGW64 前缀里的运行期 DLL，
+	# 非系统 DLL（zlib / libwinpthread 等）必须随包分发：只认工具链前缀里的运行期 DLL，
 	# 系统 DLL 在 System32，不会被误打包。
 	for dll in "$STAGE"/*.dll; do
 		while read -r dep; do
 			[ -n "$dep" ] || continue
-			[ -e "/mingw64/bin/$dep" ] || continue
-			# 多个库会依赖同一个 dep（avcodec / avformat 都吃 zlib1.dll），去重：
+			[ -e "$runtime_bin/$dep" ] || continue
+			# 多个库会依赖同一个 dep（avcodec / avformat 都吃 zlib），去重：
 			# libs_csv 是 index.json 里的运行期库清单，重复登记会让消费方重复解包。
 			case ",${libs_csv}," in *",$dep,"*) continue ;; esac
-			cp -L "/mingw64/bin/$dep" "$STAGE/$dep" || die "拷贝运行期依赖失败：$dep"
+			cp -L "$runtime_bin/$dep" "$STAGE/$dep" || die "拷贝运行期依赖失败：$dep"
 			libs_csv="$libs_csv,$dep"
 			echo "  bundled dep: $dep"
 		done < <(objdump -p "$dll" | awk '/DLL Name:/ {print $3}' | sort -u)

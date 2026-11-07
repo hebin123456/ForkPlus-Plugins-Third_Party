@@ -21,6 +21,7 @@
   },
   "rids": [
     "win-x64",
+    "win-arm64",
     "linux-x64",
     "linux-arm64",
     "osx-arm64",
@@ -32,6 +33,7 @@
   },
   "platforms": {
     "win-x64": "MSYS2 MINGW64 自建，产出 fpp_audio.dll（WASAPI 运行期链接，无链接依赖）",
+    "win-arm64": "MSYS2 CLANGARM64 自建（clang，原生 aarch64-w64-windows-gnu），产出 fpp_audio.dll",
     "linux-x64": "自建，产出 libfpp_audio.so.0（SONAME；ALSA / PulseAudio 运行期 dlopen）",
     "linux-arm64": "自建，产出 libfpp_audio.so.0",
     "osx-arm64": "自建，产出 libfpp_audio.0.dylib（install_name = @loader_path/libfpp_audio.0.dylib；CoreAudio 运行期 dlopen）",

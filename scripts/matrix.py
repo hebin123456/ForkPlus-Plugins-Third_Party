@@ -13,11 +13,14 @@ import json
 import os
 import sys
 
-# RID → runner。与 ForkPlus 宿主的五平台一致（见插件仓 .github/workflows/build.yml）。
+# RID → runner。与 ForkPlus 宿主的六平台一致（见插件仓 .github/workflows/build.yml）。
 # osx-x64 不用 Intel runner（macos-13 容量小且已进退役流程）：跑 macos-latest（arm64），
 # 由 build.sh 用 Xcode clang 的 -arch x86_64 交叉产出 Intel 交付件。
+# win-arm64 用 GitHub 原生 Windows ARM64 runner（windows-11-arm，公开仓库免费），
+# 原生编译，不做交叉。
 RUNNERS = {
     "win-x64": "windows-latest",
+    "win-arm64": "windows-11-arm",
     "linux-x64": "ubuntu-latest",
     "linux-arm64": "ubuntu-22.04-arm",
     "osx-arm64": "macos-latest",

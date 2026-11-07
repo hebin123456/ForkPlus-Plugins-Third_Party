@@ -10,7 +10,7 @@
     "只解码，不编码：--disable-encoders --disable-muxers --disable-hwaccels。",
     "绝不带 --enable-gpl / --enable-nonfree / --enable-version3，产物保持 LGPL-2.1-or-later。",
     "--disable-autodetect：不链接任何外部编解码库，五平台能力一致、无额外运行期依赖（zlib 例外，见下）。",
-    "五个 RID 用同一套 configure，只按平台自动切换工具链。"
+    "六个 RID 用同一套 configure，只按平台自动切换工具链。"
   ],
   "buildScript": "build.sh",
   "runtimeLibraries": [
@@ -31,10 +31,11 @@
   },
   "zlib": {
     "enabled": "autodetect",
-    "note": "唯一允许的外部依赖（PNG 内嵌封面必需）。configure 前探测本机构建用 zlib，缺则自动降级不带 --enable-zlib，不会构建失败；Windows 上若被链接则由构建脚本把 zlib1.dll 一并打进交付件。"
+    "note": "唯一允许的外部依赖（PNG 内嵌封面必需）。configure 前探测本机构建用 zlib，缺则自动降级不带 --enable-zlib，不会构建失败；Windows 上若被链接则由构建脚本扫描导入表，把对应的 zlib / 工具链运行期 DLL 一并打进交付件。"
   },
   "rids": [
     "win-x64",
+    "win-arm64",
     "linux-x64",
     "linux-arm64",
     "osx-arm64",
