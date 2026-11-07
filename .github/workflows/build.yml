@@ -150,20 +150,8 @@ jobs:
         run: |
           set -e
           workdir="$(cygpath -u "$GITHUB_WORKSPACE")"
-          MSYSTEM=CLANGARM64 /c/msys64/usr/bin/bash.exe -lc "
-            set -x
-            cd '$workdir'
-            pwd
-            command -v git python3 cc make objdump || true
-            printf 'int main(void){return 0;}\n' > /tmp/fpp_cc_probe.c
-            cc -dumpmachine || true
-            cc /tmp/fpp_cc_probe.c -o /tmp/fpp_cc_probe.exe
-            echo \"compile+link exit=\$?\"
-            /tmp/fpp_cc_probe.exe
-            echo \"run exit=\$?\"
-            cc -v /tmp/fpp_cc_probe.c -o /tmp/fpp_cc_probe.exe 2>&1 | tail -n 20 || true
-            bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist
-          "
+          MSYSTEM=CLANGARM64 /c/msys64/usr/bin/bash.exe -lc \
+            "cd '$workdir' && bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist"
 
       - name: Build (Linux / macOS)
         if: runner.os != 'Windows'
