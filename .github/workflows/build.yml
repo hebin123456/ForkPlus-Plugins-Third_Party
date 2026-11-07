@@ -102,11 +102,17 @@ jobs:
         run: |
           set -e
           MSYSTEM=CLANGARM64 /c/msys64/usr/bin/bash.exe -lc '
-            pacman -Sy --needed --noconfirm --noprogressbar \
-              make \
-              mingw-w64-clang-aarch64-toolchain \
-              mingw-w64-clang-aarch64-zlib \
-              mingw-w64-clang-aarch64-python
+            pkgs="make mingw-w64-clang-aarch64-toolchain mingw-w64-clang-aarch64-zlib mingw-w64-clang-aarch64-python"
+            # 镜像偶发慢速/断流（实测 ftp2.osuosl.org 低于 1B/s 会让 pacman 整笔事务失败）：
+            # 最多重试 3 次，已下载的包在 pacman 缓存里，重试只补缺。
+            for attempt in 1 2 3; do
+              if pacman -Sy --needed --noconfirm --noprogressbar $pkgs; then
+                exit 0
+              fi
+              echo "::warning::pacman 安装失败（第 ${attempt} 次），15s 后重试"
+              sleep 15
+            done
+            exit 1
           '
 
       # build.sh / pack.py 用 python3 解析 manifest 与打包（Windows 的 MSYS2 里另装了
@@ -135,14 +141,17 @@ jobs:
         shell: msys2 {0}
         run: bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist
 
-      # 镜像自带的 MSYS2（C:\msys64）未进 PATH，显式经它的 bash 进入 CLANGARM64 环境；
-      # CHERE_INVOKING=1 保留当前工作目录（否则 /etc/profile 会 cd 到 $HOME）。
+      # 镜像自带的 MSYS2（C:\msys64）未进 PATH，显式经它的 bash 进入 CLANGARM64 环境。
+      # 注意：/etc/profile 会把工作目录切到 $HOME（实测 CHERE_INVOKING 在该镜像上不生效），
+      # 这里用 cygpath 把工作区转成 MSYS 路径后显式 cd，再执行 build.sh。
       - name: Build (Windows ARM64 · MSYS2 CLANGARM64)
         if: matrix.rid == 'win-arm64'
         shell: bash
         run: |
-          MSYSTEM=CLANGARM64 CHERE_INVOKING=1 /c/msys64/usr/bin/bash.exe -lc \
-            "bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist"
+          set -e
+          workdir="$(cygpath -u "$GITHUB_WORKSPACE")"
+          MSYSTEM=CLANGARM64 /c/msys64/usr/bin/bash.exe -lc \
+            "cd '$workdir' && bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist"
 
       - name: Build (Linux / macOS)
         if: runner.os != 'Windows'
