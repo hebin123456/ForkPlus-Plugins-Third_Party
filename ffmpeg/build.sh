@@ -99,8 +99,12 @@ win-arm64)
 	# 但 msys-2.0.dll 是 x86_64（在 ARM64 上模拟运行），uname 给出 x86_64 /
 	# CLANGARM64_NT-*，configure 的自动探测既会选错 arch，也认不出 mingw 目标，
 	# 必须显式指定 arch 与 target-os（与 MSYS2 官方 ffmpeg PKGBUILD 同法）。
+	# 另外 msys 是 x86_64 进程，configure 的 "编译并运行" 探测（test_exec）跑不
+	# 通 aarch64 测试程序，故声明为交叉编译——configure 只编译不运行（这正是
+	# "gcc is unable to create an executable file ... use --enable-cross-compile"
+	# 提示的场景）；产物仍是本机原生 aarch64。
 	# aarch64 没有 x86 汇编，不加 --enable-x86asm。
-	CONFIGURE+=(--arch=aarch64 --target-os=mingw32)
+	CONFIGURE+=(--arch=aarch64 --target-os=mingw32 --enable-cross-compile)
 	;;
 osx-arm64)
 	# macOS 的 dylib 默认把 install_name 写成本次构建前缀下的绝对路径（临时目录，运行期

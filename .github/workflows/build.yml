@@ -155,6 +155,13 @@ jobs:
             cd '$workdir'
             pwd
             command -v git python3 cc make objdump || true
+            printf 'int main(void){return 0;}\n' > /tmp/fpp_cc_probe.c
+            cc -dumpmachine || true
+            cc /tmp/fpp_cc_probe.c -o /tmp/fpp_cc_probe.exe
+            echo \"compile+link exit=\$?\"
+            /tmp/fpp_cc_probe.exe
+            echo \"run exit=\$?\"
+            cc -v /tmp/fpp_cc_probe.c -o /tmp/fpp_cc_probe.exe 2>&1 | tail -n 20 || true
             bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist
           "
 
