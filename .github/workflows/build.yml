@@ -102,7 +102,7 @@ jobs:
         run: |
           set -e
           MSYSTEM=CLANGARM64 /c/msys64/usr/bin/bash.exe -lc '
-            pkgs="make mingw-w64-clang-aarch64-toolchain mingw-w64-clang-aarch64-zlib mingw-w64-clang-aarch64-python"
+            pkgs="make git mingw-w64-clang-aarch64-toolchain mingw-w64-clang-aarch64-zlib mingw-w64-clang-aarch64-python"
             # 镜像偶发慢速/断流（实测 ftp2.osuosl.org 低于 1B/s 会让 pacman 整笔事务失败）：
             # 最多重试 3 次，已下载的包在 pacman 缓存里，重试只补缺。
             for attempt in 1 2 3; do
@@ -150,8 +150,13 @@ jobs:
         run: |
           set -e
           workdir="$(cygpath -u "$GITHUB_WORKSPACE")"
-          MSYSTEM=CLANGARM64 /c/msys64/usr/bin/bash.exe -lc \
-            "cd '$workdir' && bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist"
+          MSYSTEM=CLANGARM64 /c/msys64/usr/bin/bash.exe -lc "
+            set -x
+            cd '$workdir'
+            pwd
+            command -v git python3 cc make objdump || true
+            bash ${{ matrix.component }}/build.sh ${{ matrix.rid }} dist
+          "
 
       - name: Build (Linux / macOS)
         if: runner.os != 'Windows'
