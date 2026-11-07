@@ -137,7 +137,13 @@ else
 fi
 
 log "configure"
-(cd "$SRC" && ./configure "${CONFIGURE[@]}")
+if ! (cd "$SRC" && ./configure "${CONFIGURE[@]}"); then
+	# configure 把失败原因（编译器测试的实际命令行与输出）只写进 config.log，
+	# 终端只给一句 "C compiler test failed."；这里把末尾打出来，CI 才有可诊断信息。
+	log "configure 失败，config.log 末尾："
+	tail -n 120 "$SRC/ffbuild/config.log" >&2 || true
+	die "configure 失败（${RID}）"
+fi
 
 log "make -j$JOBS && make install"
 if ! (cd "$SRC" && make -j"$JOBS" && make install) >"$WORK/make.log" 2>&1; then
